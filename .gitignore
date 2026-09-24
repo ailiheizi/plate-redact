@@ -50,6 +50,11 @@ out/
 *.review/
 *.review.json
 *.lock
+# fail-closed 生命周期证据（本地运行产物，不入库）
+*.frozen_input_cleanup_failure.json
+*.output_lock_release_failure.json
+*.draft_cleanup_failure.json
+*.quarantine-*
 
 # ---- Python ----
 __pycache__/

@@ -94,10 +94,13 @@
 | --- | --- |
 | `adapters.py` | 可插拔检测器接口、注册表、并集、外部进程桥、车辆检测适配器 |
 | `plate_redact.py` | 完整引擎：多引擎并集 + 跟踪 + 回溯 + 双遍渲染 + 审计发布（图片/视频） |
+| `fail_closed.py` | **fail-closed 审计与发布链路**：冻结输入 + 排他 lease + 双遍一致性 + 轨迹级输出审计 + 原子发布 |
 | `plate_redact_eu.py` | 轻量参考实现：单引擎 + 简单帧间保持（`BoxTracker`），另含白底车牌的几何约束 |
 | `plate_tracker.py` | 多目标跟踪器（纯 numpy，ByteTrack 风格两级关联） |
 | `plate_llm.py` | 视觉大模型兜底检测（Qwen2.5-VL，只判"像不像车牌"，不识别文字） |
 | `examples/cmd_detector_example.py` | 外部检测器桥的协议示例 |
+| `examples/fail_closed_synthetic.py` | 合成素材的 fail-closed 演示（四种结局，不需要任何真实素材） |
+| `tests/test_fail_closed.py` | fail-closed 链路自测（全部使用合成帧序列） |
 
 ### 快速开始
 
@@ -155,6 +158,66 @@ def _make(arg, kw):
 （帧号、宽高、base64 PNG），子进程回一行 JSON（检测框、分数、文本）。
 **任何许可证的引擎都可以这样接进来**——包括本项目刻意不打包的 GPL/AGPL 实现，
 由你自己安装、自己承担许可义务。
+
+### fail-closed 审计
+
+`plate_redact.py` 里的审计是渲染流程的一部分；`fail_closed.py` 把同一套约束
+独立成一条可单独运行、可单独回归的链路：
+
+```
+输入冻结副本 → 排他 lease → 生成 canonical draft → 三类 failure marker → 原子发布
+```
+
+入口（检测引擎仍然走 `adapters.py` 的可插拔规格，本模块不 import 任何第三方代码）：
+
+```bash
+pip install numpy opencv-python
+python fail_closed.py --source in.mp4 --output out.mp4 \
+    --detector fast-alpr --detector hyperlpr3 \
+    --vehicle-detector cmd:python3 my_vehicle_detector.py
+```
+
+`--vehicle-detector` 不是可选装饰：输出侧审计按**车辆轨迹**要求「可解释牌区」，
+拿不到车辆轨迹证据时链路会阻断，只产 draft。`--flat-tol`、`--texture-tol`、
+`--bright-min` 是可配置的判定阈值（保守默认值，不是标定过的指标）；
+`--max-frames` 只用于诊断，永远不产最终成品。
+
+产物（命名与 `plate_redact.py` 一致，`<out>.mp4` → `<out>.draft.mp4`）：
+
+| 文件 | 含义 |
+| --- | --- |
+| `out.mp4` | **只有全部审计通过才出现**：文件存在 == 本次通过 |
+| `out.draft.mp4` | 被阻断时的可复核草稿，不是成品；复核后重跑才可能变成最终名 |
+| `out.audit.json` | 机器可读报告：status、issues、双遍帧链、解码帧链、复核摘要绑定 |
+| `out.frozen_input_cleanup_failure.json` | failure marker：冻结副本清理失败 |
+| `out.output_lock_release_failure.json` | failure marker：排他 lease 释放失败 |
+| `out.draft_cleanup_failure.json` | failure marker：草稿 / 参考遍临时产物清理失败 |
+| `out.lock` | 排他 lease 边车文件（运行期间存在，正常结束会被删除） |
+
+阻断的判定不看"检测器说了什么"，只看成品文件：
+
+- **计划框在成品里必须是纯色块**——不是就说明遮挡没落到画面上（`render:*`）；
+- **每条车辆轨迹在每一帧都要有属于它自己的遮挡**，且车辆框内不能还有
+  **未被计划覆盖**的亮且带字符纹理的牌区；缺一条就记 UNKNOWN
+  （`vehicle_track:*`，`reviewable`，只有绑定内容摘要的真人裁决才能豁免）；
+- **两遍独立渲染**必须给出相同的源像素链、遮挡后链与解码帧链；
+- **清理失败也算阻断**：上面三类 marker 任一出现，最终名会被隔离、报告降级为
+  `INCOMPLETE`，绝不允许把中间态留下当成功。
+
+自测（不需要任何真实素材、权重或第三方引擎）：
+
+```bash
+python tests/test_fail_closed.py        # 17 项：正常路径 / 漏打 / 残留牌区 / UNKNOWN / 清理失败 / 复核门禁
+
+# 也可以直接看四种结局（合成视频写在 --outdir 里，可随时删除）
+python examples/fail_closed_synthetic.py --outdir /tmp/fc-demo --mode pass
+python examples/fail_closed_synthetic.py --outdir /tmp/fc-demo --mode missing_mask
+python examples/fail_closed_synthetic.py --outdir /tmp/fc-demo --mode residual_plate
+python examples/fail_closed_synthetic.py --outdir /tmp/fc-demo --mode unexplained_vehicle
+```
+
+合成场景里只有几块移动的深色"车身"和一块亮底带条纹的"车牌"，检测是纯 numpy
+的玩具实现：**安全性完全由输出侧审计独立判定**，玩具检测器的好坏不影响结论口径。
 
 ---
 
