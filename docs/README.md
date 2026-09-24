@@ -4,11 +4,27 @@
 - [DESIGN.md](../DESIGN.md)：判定口径、fail-closed 生命周期、边界。
 - 这里放**完整的分层设计**——包括还没实现的部分、以及已经被判定不可行的部分。
 
+## 设计层（为什么这么做）
+
 | 文档 | 内容 |
 | --- | --- |
-| [teacher-chain.md](teacher-chain.md) | 教师链：四类教师、证据权限模型、保守汇总规则、两阶段 attestation |
-| [multi-route.md](multi-route.md) | 多重路线：候选生成、双审计复核、架构分叉史、模型替换 |
-| [self-training.md](self-training.md) | 自训练与数据回流：四条通道、伪标签筛法、端侧部署 |
-| [measurements.md](measurements.md) | 实测与负结果：消融、耗时、缺陷复现，以及判定不可行的方案 |
+| [teacher-chain.md](teacher-chain.md) | 教师链：四类教师、证据权限模型、保守汇总规则、两阶段 attestation、汇总器与人工门禁 |
+| [multi-route.md](multi-route.md) | 多重路线：候选生成、双审计复核、架构分叉史、模型替换、增强视图 |
+| [self-training.md](self-training.md) | 自训练与数据回流：四条通道、伪标签筛法、端侧与量化、数据从哪来 |
+| [measurements.md](measurements.md) | 实测与负结果：消融、耗时、教师侧 A/B、缺陷复现、不可行清单 |
+
+## 实现层（怎么做到、什么状态）
+
+| 文档 | 内容 |
+| --- | --- |
+| [lifecycle.md](lifecycle.md) | 生命周期与审计实现细节：输入冻结、排他 lease、failure marker、可回滚提升、双遍帧链、strict 参数预注册、稳定问题摘要、shadow 私有生命周期、调度接力、密钥与历史脚本纪律 |
+| [evaluation.md](evaluation.md) | 数据获取与评测方法论：双 GT、父视频隔离、最低样本量、四引擎矩阵、指标与状态机、目录与入库门禁、采集批次与停止条件、公开数据集权利结论 |
+| [optimization.md](optimization.md) | 工程约束与优化记录：版本演进与实测数字、四个最小复现与修复、增强视图三轮记录、量化与端侧约束、模型替换与许可边界、明确不做 |
+| [scale.md](scale.md) | 机器链规模与队列快照：目录规模、场景矩阵状态、各长片 strict 跑出的轨迹与队列、教师侧运行规模、三教师汇总与恢复阻塞清单 |
 
 **共同前提**：这里所有数字都是**自测口径**——单源、自标注、非独立盲测。文档里没有独立盲测的召回率，也没有一次全片 `UNKNOWN = 0` 的通过记录。这不是回避，而是这套流程用 fail-closed 说话的原因。
+
+两条配套口径：
+
+- **规模 ≠ 通过**：`unresolved_count`、候选数、轨迹数都是**待复核项或机器台账**，不是漏牌数（见 [scale.md](scale.md)）。
+- **数字必须带「测什么 / 样本 / 状态」**：本目录里每个数字都按这个格式标注；没有标注样本与状态的数字，不要拿来做结论。
