@@ -1,0 +1,19 @@
+# 核心依赖（本仓库自身代码只用到这两个）
+numpy>=1.24
+opencv-python>=4.8
+
+# ---------------------------------------------------------------------------
+# 以下均为「可插拔检测引擎」，本仓库不打包、默认不 import，请按需自行安装
+# 并遵守各自的许可证（详见 README「参考与依赖的开源方案」）：
+#
+#   fast-alpr>=0.3   MIT        默认检测器（YOLOv9 检测 + MobileViT OCR）
+#   hyperlpr3        Apache-2.0 倾斜/多视角车牌补充检测
+#   torch            BSD-3      视觉大模型兜底（plate_llm.py）
+#   transformers     Apache-2.0  同上
+#   pillow           MIT-CMU    同上
+#   ultralytics      AGPL-3.0   车辆检测兜底（可选；AGPL 传染性请自行评估）
+#
+# 例：
+#   pip install fast-alpr
+#   pip install hyperlpr3
+# ---------------------------------------------------------------------------
