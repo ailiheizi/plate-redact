@@ -398,4 +398,9 @@ python examples/fail_closed_synthetic.py --outdir /tmp/fc-demo --mode unexplaine
 
 ## 八、延伸阅读
 
-[DESIGN.md](DESIGN.md) 是第一节的展开版：逐条标注当前状态（已实现 / 协议已实现但闭环未跑完 / 实验过 / 尚未开始），并补充边界说明。
+- [DESIGN.md](DESIGN.md)：第一节的展开版，逐条标注状态（已实现 / 协议已实现但闭环未跑完 / 实验过 / 尚未开始）与边界说明；
+- [docs/](docs/)：完整的分层设计，含未实现与已判定不可行的部分——
+  [教师链](docs/teacher-chain.md)（四类教师与证据权限模型）、
+  [多重路线](docs/multi-route.md)（候选生成 / 双审计复核 / 架构分叉史）、
+  [自训练与回流](docs/self-training.md)（Gold / Silver / HardNeg / Unknown 四条通道）、
+  [实测与负结果](docs/measurements.md)（消融、耗时、缺陷复现与不可行清单）。
